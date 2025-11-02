@@ -445,10 +445,16 @@ function subscribeToNotes() {
 // Polling fallback for when Realtime isn't available
 let pollingInterval = null;
 let lastNoteId = null;
+let pollCount = 0;
 
 async function startPolling() {
+    console.log('🔄 startPolling() called');
+
     // Don't start multiple intervals
-    if (pollingInterval) return;
+    if (pollingInterval) {
+        console.log('⚠️ Polling already running, skipping');
+        return;
+    }
 
     // Initialize with current latest note
     try {
@@ -460,13 +466,20 @@ async function startPolling() {
 
         if (data && data.length > 0) {
             lastNoteId = data[0].id;
+            console.log('✅ Initialized with latest note ID:', lastNoteId);
+        } else {
+            console.log('⚠️ No notes found during initialization');
         }
     } catch (error) {
-        console.error('Error initializing polling:', error);
+        console.error('❌ Error initializing polling:', error);
     }
 
     // Poll every 5 seconds
     pollingInterval = setInterval(async () => {
+        pollCount++;
+        console.log(`📡 Poll #${pollCount} - Checking for new notes...`);
+        console.log(`   Current lastNoteId: ${lastNoteId}`);
+
         try {
             const { data, error } = await supabase
                 .from('notes')
@@ -474,35 +487,53 @@ async function startPolling() {
                 .order('created_at', { ascending: false })
                 .limit(1);
 
-            if (error) throw error;
+            if (error) {
+                console.error('❌ Polling error:', error);
+                throw error;
+            }
+
+            console.log(`   Fetched latest note:`, data);
 
             // Check if there's a new note
             if (data && data.length > 0) {
                 const latestNote = data[0];
+                console.log(`   Latest note ID: ${latestNote.id}`);
+                console.log(`   Comparing: ${lastNoteId} vs ${latestNote.id}`);
 
-                // New note detected and it's from partner
+                // New note detected
                 if (lastNoteId !== latestNote.id) {
-                    console.log('New note detected!', latestNote);
+                    console.log('🎉 NEW NOTE DETECTED!', latestNote);
+                    console.log(`   Author: ${latestNote.author}, Current user: ${currentUser}`);
 
                     if (latestNote.author !== currentUser) {
+                        console.log('📬 Showing notification for partner note');
                         showNotification(
                             `💕 New note from ${latestNote.author}`,
                             latestNote.content.substring(0, 100) + (latestNote.content.length > 100 ? '...' : '')
                         );
+                    } else {
+                        console.log('📝 New note is from current user, no notification');
                     }
 
                     // Update for everyone
-                    loadNotes();
-                    loadUserStats();
+                    console.log('🔄 Reloading notes and stats...');
+                    await loadNotes();
+                    await loadUserStats();
                     lastNoteId = latestNote.id;
+                    console.log(`✅ Updated lastNoteId to: ${lastNoteId}`);
+                } else {
+                    console.log('   No new notes');
                 }
+            } else {
+                console.log('   No notes in database');
             }
         } catch (error) {
-            console.error('Polling error:', error);
+            console.error('❌ Polling error:', error);
         }
     }, 5000);
 
     console.log('📡 Polling started - checking every 5 seconds');
+    console.log('💡 Open this console on both devices to see polling activity');
 }
 
 // Utility functions
