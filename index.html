@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Our Notes</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Name Entry Screen -->
+        <div id="nameScreen" class="screen">
+            <div class="login-box">
+                <h1>💕 Our Notes 💕</h1>
+                <p>A private space for us to share messages</p>
+                <form id="nameForm">
+                    <input
+                        type="text"
+                        id="nameInput"
+                        placeholder="Enter your name"
+                        required
+                        autocomplete="off"
+                    >
+                    <input
+                        type="password"
+                        id="passwordInput"
+                        placeholder="Enter password"
+                        required
+                        autocomplete="off"
+                    >
+                    <button type="submit">Continue</button>
+                </form>
+                <p class="error" id="loginError"></p>
+            </div>
+        </div>
+
+        <!-- Main App Screen -->
+        <div id="appScreen" class="screen hidden">
+            <header>
+                <h1>💕 Our Notes</h1>
+                <div class="user-info">
+                    <span id="currentUserName"></span>
+                </div>
+            </header>
+
+            <main>
+                <!-- Write New Note -->
+                <div class="write-note-section">
+                    <h2>Write a note</h2>
+                    <form id="noteForm">
+                        <textarea
+                            id="noteInput"
+                            placeholder="Write something sweet..."
+                            rows="4"
+                            required
+                        ></textarea>
+                        <button type="submit">Send Note 💌</button>
+                    </form>
+                </div>
+
+                <!-- Notes List -->
+                <div class="notes-section">
+                    <h2>Our Messages</h2>
+                    <div id="notesList" class="notes-list">
+                        <p class="loading">Loading notes...</p>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supabase Connection Test</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .result {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 10px 0;
+            border-left: 4px solid #667eea;
+        }
+        .error {
+            border-left-color: #e74c3c;
+            color: #e74c3c;
+        }
+        .success {
+            border-left-color: #27ae60;
+            color: #27ae60;
+        }
+        button {
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        pre {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Supabase Connection Test</h1>
+
+    <button onclick="testConnection()">1. Test Connection</button>
+    <button onclick="testTable()">2. Test Table Exists</button>
+    <button onclick="insertTestNote()">3. Insert Test Note</button>
+    <button onclick="readNotes()">4. Read Notes</button>
+
+    <div id="results"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        const SUPABASE_URL = 'https://ihjkbjntjuctpdsccuxg.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imloamtiam50anVjdHBkc2NjdXhnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIwOTkxNTMsImV4cCI6MjA3NzY3NTE1M30.8SIyvNFL26lxSresSmTZikTfpKtanZPAl252RuCEux0';
+
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const resultsDiv = document.getElementById('results');
+
+        function addResult(message, isError = false) {
+            const div = document.createElement('div');
+            div.className = 'result ' + (isError ? 'error' : 'success');
+            div.innerHTML = message;
+            resultsDiv.appendChild(div);
+        }
+
+        async function testConnection() {
+            resultsDiv.innerHTML = '';
+            try {
+                addResult('✓ Supabase client initialized successfully');
+                addResult(`URL: ${SUPABASE_URL}`);
+                addResult(`Key: ${SUPABASE_ANON_KEY.substring(0, 20)}...`);
+            } catch (error) {
+                addResult(`✗ Error: ${error.message}`, true);
+            }
+        }
+
+        async function testTable() {
+            try {
+                const { data, error } = await supabase
+                    .from('notes')
+                    .select('count');
+
+                if (error) {
+                    addResult(`✗ Table Error: ${error.message}`, true);
+                    addResult(`<pre>${JSON.stringify(error, null, 2)}</pre>`, true);
+                } else {
+                    addResult('✓ Table "notes" exists and is accessible!');
+                }
+            } catch (error) {
+                addResult(`✗ Error: ${error.message}`, true);
+            }
+        }
+
+        async function insertTestNote() {
+            try {
+                const { data, error } = await supabase
+                    .from('notes')
+                    .insert([
+                        {
+                            content: 'Test note from connection test',
+                            author: 'Test User',
+                            created_at: new Date().toISOString()
+                        }
+                    ])
+                    .select();
+
+                if (error) {
+                    addResult(`✗ Insert Error: ${error.message}`, true);
+                    addResult(`<pre>${JSON.stringify(error, null, 2)}</pre>`, true);
+                } else {
+                    addResult('✓ Test note inserted successfully!');
+                    addResult(`<pre>${JSON.stringify(data, null, 2)}</pre>`);
+                }
+            } catch (error) {
+                addResult(`✗ Error: ${error.message}`, true);
+            }
+        }
+
+        async function readNotes() {
+            try {
+                const { data, error } = await supabase
+                    .from('notes')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+
+                if (error) {
+                    addResult(`✗ Read Error: ${error.message}`, true);
+                    addResult(`<pre>${JSON.stringify(error, null, 2)}</pre>`, true);
+                } else {
+                    addResult(`✓ Successfully read ${data.length} note(s)`);
+                    addResult(`<pre>${JSON.stringify(data, null, 2)}</pre>`);
+                }
+            } catch (error) {
+                addResult(`✗ Error: ${error.message}`, true);
+            }
+        }
+    </script>
+</body>
+</html>
