@@ -444,11 +444,26 @@ function subscribeToNotes() {
 
 // Polling fallback for when Realtime isn't available
 let pollingInterval = null;
-let lastNoteCount = 0;
+let lastNoteId = null;
 
-function startPolling() {
+async function startPolling() {
     // Don't start multiple intervals
     if (pollingInterval) return;
+
+    // Initialize with current latest note
+    try {
+        const { data } = await supabase
+            .from('notes')
+            .select('id')
+            .order('created_at', { ascending: false })
+            .limit(1);
+
+        if (data && data.length > 0) {
+            lastNoteId = data[0].id;
+        }
+    } catch (error) {
+        console.error('Error initializing polling:', error);
+    }
 
     // Poll every 5 seconds
     pollingInterval = setInterval(async () => {
@@ -464,35 +479,30 @@ function startPolling() {
             // Check if there's a new note
             if (data && data.length > 0) {
                 const latestNote = data[0];
-                const currentCount = await getNoteCount();
 
-                if (currentCount > lastNoteCount && latestNote.author !== currentUser) {
-                    // New note from partner!
-                    showNotification(
-                        `💕 New note from ${latestNote.author}`,
-                        latestNote.content.substring(0, 100) + (latestNote.content.length > 100 ? '...' : '')
-                    );
+                // New note detected and it's from partner
+                if (lastNoteId !== latestNote.id) {
+                    console.log('New note detected!', latestNote);
+
+                    if (latestNote.author !== currentUser) {
+                        showNotification(
+                            `💕 New note from ${latestNote.author}`,
+                            latestNote.content.substring(0, 100) + (latestNote.content.length > 100 ? '...' : '')
+                        );
+                    }
+
+                    // Update for everyone
                     loadNotes();
                     loadUserStats();
+                    lastNoteId = latestNote.id;
                 }
-
-                lastNoteCount = currentCount;
             }
         } catch (error) {
             console.error('Polling error:', error);
         }
     }, 5000);
-}
 
-async function getNoteCount() {
-    try {
-        const { count } = await supabase
-            .from('notes')
-            .select('*', { count: 'exact', head: true });
-        return count || 0;
-    } catch {
-        return 0;
-    }
+    console.log('📡 Polling started - checking every 5 seconds');
 }
 
 // Utility functions
