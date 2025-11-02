@@ -381,12 +381,12 @@ async function deleteNote(noteId) {
 
 // Subscribe to real-time changes
 function subscribeToNotes() {
-    supabase
-        .channel('notes')
+    const notesChannel = supabase
+        .channel('notes-channel')
         .on('postgres_changes',
             { event: '*', schema: 'public', table: 'notes' },
             (payload) => {
-                console.log('Change received!', payload);
+                console.log('Notes change received!', payload);
 
                 // Show notification if new note from partner
                 if (payload.eventType === 'INSERT' && payload.new.author !== currentUser) {
@@ -396,22 +396,36 @@ function subscribeToNotes() {
                     );
                 }
 
+                // Reload notes list
                 loadNotes();
             }
         )
-        .subscribe();
+        .subscribe((status) => {
+            if (status === 'SUBSCRIBED') {
+                console.log('✅ Real-time subscription active - you will see updates automatically!');
+            } else if (status === 'CHANNEL_ERROR') {
+                console.error('❌ Real-time subscription failed. Updates may not be automatic.');
+            }
+        });
 
     // Subscribe to stats changes
     supabase
-        .channel('user_stats')
+        .channel('user-stats-channel')
         .on('postgres_changes',
             { event: '*', schema: 'public', table: 'user_stats' },
             (payload) => {
                 console.log('Stats change received!', payload);
-                loadUserStats();
+                // Only reload stats if it's for current user
+                if (payload.new && payload.new.username === currentUser) {
+                    loadUserStats();
+                }
             }
         )
-        .subscribe();
+        .subscribe((status) => {
+            if (status === 'SUBSCRIBED') {
+                console.log('✅ Stats subscription active!');
+            }
+        });
 }
 
 // Utility functions
