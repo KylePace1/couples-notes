@@ -296,7 +296,8 @@ async function handleAddNote(e) {
         // Show a little celebration for posting
         showCelebration('📝 +10 points!');
 
-        // Reload stats to show new points
+        // Reload notes and stats immediately
+        await loadNotes();
         await loadUserStats();
     } catch (error) {
         console.error('Error adding note:', error);
