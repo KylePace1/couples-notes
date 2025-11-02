@@ -1,0 +1,32 @@
+{
+  "name": "Our Notes - Couples App",
+  "short_name": "Our Notes",
+  "description": "A private space for couples to share sweet messages",
+  "start_url": "/couples-notes/",
+  "display": "standalone",
+  "background_color": "#667eea",
+  "theme_color": "#667eea",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["lifestyle", "social"],
+  "shortcuts": [
+    {
+      "name": "Write a note",
+      "url": "/couples-notes/",
+      "description": "Quickly write a note to your partner"
+    }
+  ]
+}

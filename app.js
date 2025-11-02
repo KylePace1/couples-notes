@@ -64,6 +64,40 @@ async function showApp() {
     await loadUserStats();
     loadNotes();
     subscribeToNotes();
+    requestNotificationPermission();
+}
+
+// Request notification permission (works on Android/Desktop, not iOS PWA)
+async function requestNotificationPermission() {
+    if ('Notification' in window && 'serviceWorker' in navigator) {
+        if (Notification.permission === 'default') {
+            // Wait a bit before asking to not overwhelm user
+            setTimeout(async () => {
+                const permission = await Notification.requestPermission();
+                if (permission === 'granted') {
+                    console.log('Notification permission granted');
+                }
+            }, 5000); // Ask after 5 seconds
+        }
+    }
+}
+
+// Show local notification (for new notes from partner)
+function showNotification(title, body) {
+    if ('Notification' in window && Notification.permission === 'granted') {
+        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+            navigator.serviceWorker.ready.then((registration) => {
+                registration.showNotification(title, {
+                    body: body,
+                    icon: '/couples-notes/icon-192.png',
+                    badge: '/couples-notes/icon-192.png',
+                    vibrate: [200, 100, 200],
+                    tag: 'new-note',
+                    requireInteraction: false
+                });
+            });
+        }
+    }
 }
 
 // Load user stats
@@ -353,6 +387,15 @@ function subscribeToNotes() {
             { event: '*', schema: 'public', table: 'notes' },
             (payload) => {
                 console.log('Change received!', payload);
+
+                // Show notification if new note from partner
+                if (payload.eventType === 'INSERT' && payload.new.author !== currentUser) {
+                    showNotification(
+                        `💕 New note from ${payload.new.author}`,
+                        payload.new.content.substring(0, 100) + (payload.new.content.length > 100 ? '...' : '')
+                    );
+                }
+
                 loadNotes();
             }
         )
