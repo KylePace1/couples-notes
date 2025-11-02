@@ -379,14 +379,18 @@ async function deleteNote(noteId) {
     }
 }
 
-// Subscribe to real-time changes
+// Subscribe to real-time changes (with fallback polling)
 function subscribeToNotes() {
+    let realtimeEnabled = false;
+
+    // Try real-time subscription first
     const notesChannel = supabase
         .channel('notes-channel')
         .on('postgres_changes',
             { event: '*', schema: 'public', table: 'notes' },
             (payload) => {
                 console.log('Notes change received!', payload);
+                realtimeEnabled = true;
 
                 // Show notification if new note from partner
                 if (payload.eventType === 'INSERT' && payload.new.author !== currentUser) {
@@ -402,9 +406,11 @@ function subscribeToNotes() {
         )
         .subscribe((status) => {
             if (status === 'SUBSCRIBED') {
-                console.log('✅ Real-time subscription active - you will see updates automatically!');
+                console.log('✅ Real-time subscription active - updates are instant!');
+                realtimeEnabled = true;
             } else if (status === 'CHANNEL_ERROR') {
-                console.error('❌ Real-time subscription failed. Updates may not be automatic.');
+                console.log('⚠️ Real-time not available - using polling fallback (checks every 5 seconds)');
+                startPolling();
             }
         });
 
@@ -426,6 +432,67 @@ function subscribeToNotes() {
                 console.log('✅ Stats subscription active!');
             }
         });
+
+    // Fallback: Start polling after 3 seconds if realtime isn't working
+    setTimeout(() => {
+        if (!realtimeEnabled) {
+            console.log('⚠️ Starting polling fallback - checking for new notes every 5 seconds');
+            startPolling();
+        }
+    }, 3000);
+}
+
+// Polling fallback for when Realtime isn't available
+let pollingInterval = null;
+let lastNoteCount = 0;
+
+function startPolling() {
+    // Don't start multiple intervals
+    if (pollingInterval) return;
+
+    // Poll every 5 seconds
+    pollingInterval = setInterval(async () => {
+        try {
+            const { data, error } = await supabase
+                .from('notes')
+                .select('id, author, content, created_at')
+                .order('created_at', { ascending: false })
+                .limit(1);
+
+            if (error) throw error;
+
+            // Check if there's a new note
+            if (data && data.length > 0) {
+                const latestNote = data[0];
+                const currentCount = await getNoteCount();
+
+                if (currentCount > lastNoteCount && latestNote.author !== currentUser) {
+                    // New note from partner!
+                    showNotification(
+                        `💕 New note from ${latestNote.author}`,
+                        latestNote.content.substring(0, 100) + (latestNote.content.length > 100 ? '...' : '')
+                    );
+                    loadNotes();
+                    loadUserStats();
+                }
+
+                lastNoteCount = currentCount;
+            }
+        } catch (error) {
+            console.error('Polling error:', error);
+        }
+    }, 5000);
+}
+
+async function getNoteCount() {
+    try {
+        const { count } = await supabase
+            .from('notes')
+            .select('*', { count: 'exact', head: true });
+        return count || 0;
+    } catch {
+        return 0;
+    }
 }
 
 // Utility functions
